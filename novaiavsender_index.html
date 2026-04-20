@@ -139,7 +139,10 @@ tr:hover td{background:var(--s2);}
     <div class="field">
       <label>Google OAuth Client ID</label>
       <input id="clientId" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com">
-      <div class="hint">Cole aqui o Client ID criado no Google Cloud Console</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <div class="hint" style="margin:0">Cole aqui o Client ID criado no Google Cloud Console</div>
+        <span id="savedBadge" style="display:none;align-items:center;gap:5px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:var(--green);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;cursor:pointer" onclick="clearSavedId()" title="Clique para remover">✓ Salvo &nbsp;✕</span>
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn btn-google" onclick="startAuth()">
@@ -242,9 +245,28 @@ let accessToken=null,isDemo=false,leads=[],sendMode='send';
 // Show current origin for OAuth setup
 document.getElementById('thisOrigin').textContent = window.location.origin;
 
+// ── Auto-load saved Client ID ──────────────────────────
+(function(){
+  const saved = localStorage.getItem('novaIA_clientId');
+  if(saved){
+    document.getElementById('clientId').value = saved;
+    document.getElementById('savedBadge').style.display = 'inline-flex';
+  }
+})();
+
+function clearSavedId(){
+  localStorage.removeItem('novaIA_clientId');
+  document.getElementById('clientId').value = '';
+  document.getElementById('savedBadge').style.display = 'none';
+  addLog('info','Client ID removido. Cole um novo para autenticar.');
+}
+
 function startAuth(){
   const clientId=document.getElementById('clientId').value.trim();
   if(!clientId||!clientId.includes('.apps.googleusercontent.com')){alert('Cole um Client ID válido.\n\nFormato: xxxxxxxxx.apps.googleusercontent.com');return;}
+  // Save to localStorage
+  localStorage.setItem('novaIA_clientId', clientId);
+  document.getElementById('savedBadge').style.display = 'inline-flex';
   const scope='https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose';
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(window.location.href.split('?')[0])}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account&login_hint=novaiavision.br@gmail.com`;
   const popup=window.open(url,'google-auth','width=520,height=640,left=200,top=100');
