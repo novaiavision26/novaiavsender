@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovaIA Vision — Gmail Sender</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080b10;--s1:#0f1318;--s2:#151a22;--s3:#1c2230;--border:#1e2530;
+  --gold:#c8a96e;--gold2:#e8c98e;--blue:#4a9eff;--green:#4ade80;
+  --red:#f87171;--text:#e2ddd8;--muted:#5a6272;--accent:#7eb8c4;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 50% 30% at 15% 50%,rgba(200,169,110,0.05) 0%,transparent 70%),
+  linear-gradient(rgba(200,169,110,0.015) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(200,169,110,0.015) 1px,transparent 1px);
+  background-size:auto,48px 48px,48px 48px;}
+.app{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:32px 20px;}
+.hdr{display:flex;align-items:center;gap:14px;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.hdr-logo{width:42px;height:42px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+.hdr-logo::before{content:'◈';font-size:18px;color:var(--gold);}
+.hdr-logo::after{content:'';position:absolute;inset:4px;border:1px solid rgba(200,169,110,0.15);}
+.hdr h1{font-family:'Playfair Display',serif;font-size:20px;font-weight:300;color:var(--gold);letter-spacing:0.06em;}
+.hdr p{color:var(--muted);font-size:10px;letter-spacing:0.14em;margin-top:3px;}
+.auth-badge{margin-left:auto;display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);font-size:10px;letter-spacing:0.1em;}
+.auth-badge.connected{border-color:rgba(74,222,128,0.4);background:rgba(74,222,128,0.06);color:var(--green);}
+.auth-badge.disconnected{color:var(--muted);}
+.dot-status{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.dot-status.pulse{animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.step{background:var(--s2);border:1px solid var(--border);padding:14px;text-align:center;}
+.step.active{border-color:var(--gold);background:rgba(200,169,110,0.05);}
+.step.done{border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.04);}
+.step-n{font-family:'Playfair Display',serif;font-size:22px;font-weight:300;color:var(--muted);display:block;margin-bottom:4px;}
+.step.active .step-n{color:var(--gold);}
+.step.done .step-n{color:var(--green);}
+.step-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+.step.active .step-label{color:var(--text);}
+.panel{background:var(--s1);border:1px solid var(--border);padding:22px;margin-bottom:14px;position:relative;overflow:hidden;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0.25;}
+.plabel{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.plabel::after{content:'';flex:1;height:1px;background:var(--border);}
+input,textarea,select{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:9px 12px;outline:none;transition:border-color .2s;}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);}
+textarea{min-height:88px;resize:vertical;line-height:1.65;}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hint{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .2s;background:transparent;}
+.btn-gold{color:var(--bg);background:var(--gold);border-color:var(--gold);}
+.btn-gold:hover:not(:disabled){background:var(--gold2);}
+.btn-gold:disabled{opacity:.35;cursor:not-allowed;}
+.btn-ghost{color:var(--muted);border-color:var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted);}
+.btn-google{color:#fff;background:#4285f4;border-color:#4285f4;}
+.btn-google:hover{background:#5a95f5;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-bottom:14px;}
+.stat{background:var(--s1);padding:13px;text-align:center;}
+.stat-v{font-family:'Playfair Display',serif;font-size:26px;font-weight:300;color:var(--gold);display:block;line-height:1;}
+.stat-l{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-top:3px;display:block;}
+.tbl-wrap{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;font-weight:400;}
+td{padding:7px 10px;border-bottom:1px solid rgba(30,37,48,0.5);font-size:11px;}
+tr:hover td{background:var(--s2);}
+.badge{display:inline-block;padding:2px 7px;font-size:9px;letter-spacing:.08em;border:1px solid;text-transform:uppercase;}
+.b-pend{color:#fbbf24;border-color:#fbbf24;}
+.b-sent{color:var(--green);border-color:var(--green);}
+.b-draft{color:var(--accent);border-color:var(--accent);}
+.b-err{color:var(--red);border-color:var(--red);}
+.log{background:var(--s2);border:1px solid var(--border);padding:11px;max-height:130px;overflow-y:auto;scrollbar-width:thin;font-size:11px;line-height:1.75;}
+.ll{display:flex;gap:10px;}
+.lt{color:var(--muted);flex-shrink:0;}
+.lok{color:var(--green);}.lerr{color:var(--red);}.linf{color:var(--accent);}
+.prog-wrap{background:var(--border);height:3px;margin-bottom:14px;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--accent));transition:width .4s;width:0%;}
+.setup-box{background:var(--s2);border:1px solid var(--border);border-left:2px solid var(--gold);padding:16px;margin-bottom:14px;}
+.setup-box h3{font-family:'Playfair Display',serif;font-size:14px;font-weight:400;color:var(--gold);margin-bottom:12px;}
+.setup-step{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;}
+.setup-num{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--gold);flex-shrink:0;}
+.setup-txt{font-size:11px;line-height:1.6;color:var(--text);}
+.setup-txt a{color:var(--blue);text-decoration:none;}
+.setup-txt a:hover{text-decoration:underline;}
+.setup-txt code{background:var(--s3);padding:1px 5px;color:var(--accent);font-size:11px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(8,11,16,0.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.overlay.active{display:flex;}
+.spinner{width:38px;height:38px;border:1px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov-text{color:var(--gold);font-size:10px;letter-spacing:.2em;text-transform:uppercase;}
+.empty-state{text-align:center;padding:28px;color:var(--muted);font-size:11px;line-height:1.7;}
+.empty-state .ei{font-size:28px;margin-bottom:8px;opacity:.3;}
+.mode-row{display:flex;gap:0;margin-bottom:14px;}
+.mode-btn{flex:1;padding:9px;text-align:center;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;transition:all .2s;}
+.mode-btn:not(:last-child){border-right:none;}
+.mode-btn.active{background:rgba(200,169,110,0.08);color:var(--gold);border-color:var(--gold);}
+@media(max-width:600px){.grid2{grid-template-columns:1fr;}.steps{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="ov-text" id="ovText">Processando...</div>
+</div>
+<div class="app">
+  <div class="hdr">
+    <div class="hdr-logo"></div>
+    <div>
+      <h1>NovaIA Vision — Gmail Sender</h1>
+      <p>Prospecção · Site + CRM + Gestão para Clínicas</p>
+    </div>
+    <div class="auth-badge disconnected" id="authBadge">
+      <div class="dot-status"></div>
+      <span id="authLabel">Não autenticado</span>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step active" id="step1"><span class="step-n">①</span><span class="step-label">Autenticar Gmail</span></div>
+    <div class="step" id="step2"><span class="step-n">②</span><span class="step-label">Configurar Leads</span></div>
+    <div class="step" id="step3"><span class="step-n">③</span><span class="step-label">Disparar</span></div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="panel" id="panelAuth">
+    <div class="plabel">① Autenticação Google OAuth</div>
+    <div class="setup-box">
+      <h3>Configure seu Client ID Google (1 vez, gratuito)</h3>
+      <div class="setup-step"><div class="setup-num">1</div><div class="setup-txt">Acesse <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> com <code>novaiavision.br@gmail.com</code></div></div>
+      <div class="setup-step"><div class="setup-num">2</div><div class="setup-txt">Crie um projeto → <b>APIs e Serviços</b> → <b>Credenciais</b> → <b>Criar credenciais</b> → <b>ID do cliente OAuth</b></div></div>
+      <div class="setup-step"><div class="setup-num">3</div><div class="setup-txt">Tipo: <code>Aplicativo da Web</code> · Origens JS autorizadas: <code id="thisOrigin">aguardando...</code></div></div>
+      <div class="setup-step"><div class="setup-num">4</div><div class="setup-txt">Ative a <b>Gmail API</b>: APIs e Serviços → Biblioteca → "Gmail API" → Ativar</div></div>
+      <div class="setup-step"><div class="setup-num">5</div><div class="setup-txt">Copie o <b>Client ID</b> e cole abaixo</div></div>
+    </div>
+    <div class="field">
+      <label>Google OAuth Client ID</label>
+      <input id="clientId" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com">
+      <div class="hint">Cole aqui o Client ID criado no Google Cloud Console</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-google" onclick="startAuth()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Autenticar com Google
+      </button>
+      <button class="btn btn-ghost" onclick="useDemo()">▷ Demo sem auth</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="panelMain" style="display:none">
+    <div class="stats">
+      <div class="stat"><span class="stat-v" id="sTotal">0</span><span class="stat-l">Leads</span></div>
+      <div class="stat"><span class="stat-v" id="sPend" style="color:#fbbf24">0</span><span class="stat-l">Pendentes</span></div>
+      <div class="stat"><span class="stat-v" id="sSent" style="color:var(--green)">0</span><span class="stat-l">Enviados</span></div>
+      <div class="stat"><span class="stat-v" id="sErr" style="color:var(--red)">0</span><span class="stat-l">Erros</span></div>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" id="progBar"></div></div>
+
+    <div class="panel">
+      <div class="plabel">② Leads</div>
+      <div class="grid2" style="margin-bottom:12px">
+        <div>
+          <div class="field"><label>Nome</label><input id="lNome" placeholder="Dr. Alexandre Oliveira"></div>
+          <div class="field"><label>Email</label><input id="lEmail" placeholder="alexandre@prorir.com.br" type="email"></div>
+        </div>
+        <div>
+          <div class="field"><label>Clínica</label><input id="lClinica" placeholder="PróRir Odontologia"></div>
+          <div class="field"><label>Segmento</label>
+            <select id="lSeg">
+              <option value="odonto">Odontologia</option>
+              <option value="dermato">Dermatologia / Estética</option>
+              <option value="fisio">Fisioterapia</option>
+              <option value="medica">Clínica Médica</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-ghost" onclick="addLead()">+ Adicionar lead</button>
+        <label class="btn btn-ghost" style="cursor:pointer">↑ Importar CSV<input type="file" accept=".csv" onchange="importCSV(this)" style="display:none"></label>
+      </div>
+      <div class="tbl-wrap" id="leadsWrap">
+        <div class="empty-state"><div class="ei">📋</div>Nenhum lead. Adicione ou importe o CSV.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="plabel">③ Template do Email</div>
+      <div class="field"><label>Assunto</label><input id="tSubject" value="Uma oportunidade para a {{clinica}} crescer no digital"></div>
+      <div class="mode-row">
+        <button class="mode-btn active" onclick="setMode('send',this)">Enviar direto</button>
+        <button class="mode-btn" onclick="setMode('draft',this)">Salvar rascunho</button>
+      </div>
+      <div class="field">
+        <label>Corpo · variáveis: {{nome}} {{clinica}}</label>
+        <textarea id="tBody" rows="14">Olá, {{nome}}!
+
+Meu nome é Carol, especialista em presença digital para clínicas de saúde — e identifiquei que a {{clinica}} tem potencial para crescer muito mais no digital.
+
+O que ofereço é um pacote completo pensado para clínicas que querem crescer sem depender de agência cara ou equipe grande:
+
+✦ Site moderno e profissional — que gera confiança e converte visitante em paciente
+✦ CRM integrado — gestão de leads, retornos e histórico em um só lugar
+✦ Automações e IA — lembretes, follow-ups e comunicação no piloto automático
+
+Implementação rápida, suporte direto e resultado visível em semanas.
+
+Posso reservar 20 minutos esta semana para te mostrar como ficaria na prática para a {{clinica}}?
+
+Carol
+NovaIA Vision — Presença Digital que Vende
+novaiavision.br@gmail.com</textarea>
+      </div>
+      <div class="plabel" style="margin-top:4px">Prévia personalizada</div>
+      <div id="previewBox" style="background:var(--s2);border:1px solid var(--border);border-left:2px solid var(--gold);padding:14px;font-size:11px;line-height:1.8;white-space:pre-line;max-height:180px;overflow-y:auto;color:var(--text)">Adicione leads para ver a prévia.</div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn btn-gold" id="btnSend" onclick="startSend()" disabled>▶ Disparar emails</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="white-space:nowrap;color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Delay (s)</label>
+          <input id="delay" value="6" style="width:60px;padding:9px 8px">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="plabel">Log de envio</div>
+      <div class="log" id="logBox">
+        <div class="ll"><span class="lt">--:--</span><span class="linf">Pronto para disparar.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+let accessToken=null,isDemo=false,leads=[],sendMode='send';
+
+// Show current origin for OAuth setup
+document.getElementById('thisOrigin').textContent = window.location.origin;
+
+function startAuth(){
+  const clientId=document.getElementById('clientId').value.trim();
+  if(!clientId||!clientId.includes('.apps.googleusercontent.com')){alert('Cole um Client ID válido.\n\nFormato: xxxxxxxxx.apps.googleusercontent.com');return;}
+  const scope='https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose';
+  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(window.location.href.split('?')[0])}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account&login_hint=novaiavision.br@gmail.com`;
+  const popup=window.open(url,'google-auth','width=520,height=640,left=200,top=100');
+  const timer=setInterval(()=>{
+    try{const h=popup.location.hash;if(h&&h.includes('access_token')){clearInterval(timer);popup.close();const p=new URLSearchParams(h.substring(1));accessToken=p.get('access_token');onAuthSuccess();}}catch(e){}
+    if(popup.closed)clearInterval(timer);
+  },500);
+}
+
+function useDemo(){isDemo=true;accessToken='DEMO';onAuthSuccess();addLog('info','Modo demo ativo — emails não serão enviados.');}
+
+function onAuthSuccess(){
+  const b=document.getElementById('authBadge');
+  b.className='auth-badge connected';
+  b.innerHTML=`<div class="dot-status pulse"></div><span>${isDemo?'Demo ativo':'novaiavision.br@gmail.com ✓'}</span>`;
+  setStep(2);
+  document.getElementById('panelAuth').style.display='none';
+  document.getElementById('panelMain').style.display='block';
+  addLog('ok',isDemo?'Modo demo iniciado.':'Gmail autenticado com sucesso!');
+}
+
+function setStep(n){for(let i=1;i<=3;i++){const e=document.getElementById(`step${i}`);e.className='step'+(i<n?' done':i===n?' active':'');}}
+function setMode(m,btn){sendMode=m;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+
+function addLead(){
+  const nome=document.getElementById('lNome').value.trim();
+  const email=document.getElementById('lEmail').value.trim();
+  const clinica=document.getElementById('lClinica').value.trim();
+  if(!email){alert('Email é obrigatório.');return;}
+  leads.push({nome,email,clinica,seg:document.getElementById('lSeg').value,status:'pending'});
+  ['lNome','lEmail','lClinica'].forEach(id=>document.getElementById(id).value='');
+  renderLeads();updateStats();updatePreview();
+}
+
+function importCSV(input){
+  const file=input.files[0];if(!file)return;
+  Papa.parse(file,{header:true,skipEmptyLines:true,complete:res=>{
+    let n=0;
+    res.data.forEach(r=>{
+      const get=(...keys)=>{for(const k of keys){const f=Object.keys(r).find(rk=>rk.toLowerCase().includes(k));if(f&&r[f])return String(r[f]).trim();}return '';};
+      const email=get('email','e-mail','mail');
+      if(!email||!email.includes('@'))return;
+      leads.push({nome:get('nome','name','contato'),email,clinica:get('clinica','empresa','name','nome'),seg:detectSeg(get('segmento','setor','cargo')),status:'pending'});n++;
+    });
+    renderLeads();updateStats();updatePreview();addLog('ok',`${n} leads importados.`);
+  }});
+}
+
+function detectSeg(txt){
+  txt=(txt||'').toLowerCase();
+  if(txt.includes('odonto')||txt.includes('dent'))return'odonto';
+  if(txt.includes('dermato')||txt.includes('estet')||txt.includes('skin'))return'dermato';
+  if(txt.includes('fisio')||txt.includes('reabilit'))return'fisio';
+  return'medica';
+}
+
+function renderLeads(){
+  const w=document.getElementById('leadsWrap');
+  if(!leads.length){w.innerHTML='<div class="empty-state"><div class="ei">📋</div>Nenhum lead ainda.</div>';document.getElementById('btnSend').disabled=true;return;}
+  document.getElementById('btnSend').disabled=false;
+  const sc={pending:'b-pend',sent:'b-sent',draft:'b-draft',error:'b-err'};
+  const sl={pending:'Pendente',sent:'Enviado',draft:'Rascunho',error:'Erro'};
+  w.innerHTML=`<table><thead><tr><th>#</th><th>Nome</th><th>Email</th><th>Clínica</th><th>Status</th><th></th></tr></thead><tbody>
+  ${leads.map((l,i)=>`<tr><td style="color:var(--muted)">${i+1}</td><td>${l.nome||'—'}</td><td style="color:var(--accent)">${l.email}</td><td>${l.clinica||'—'}</td><td><span class="badge ${sc[l.status]||'b-pend'}">${sl[l.status]||l.status}</span></td><td><button onclick="leads.splice(${i},1);renderLeads();updateStats();updatePreview();" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function updateStats(){
+  document.getElementById('sTotal').textContent=leads.length;
+  document.getElementById('sPend').textContent=leads.filter(l=>l.status==='pending').length;
+  document.getElementById('sSent').textContent=leads.filter(l=>l.status==='sent'||l.status==='draft').length;
+  document.getElementById('sErr').textContent=leads.filter(l=>l.status==='error').length;
+  const sent=leads.filter(l=>l.status!=='pending').length;
+  document.getElementById('progBar').style.width=leads.length?(sent/leads.length*100)+'%':'0%';
+}
+
+function updatePreview(){
+  const first=leads.find(l=>l.status==='pending')||leads[0];
+  if(!first){document.getElementById('previewBox').textContent='Adicione leads para ver a prévia.';return;}
+  document.getElementById('previewBox').textContent=personalize(document.getElementById('tBody').value,first);
+}
+document.getElementById('tBody')?.addEventListener('input',updatePreview);
+
+function personalize(txt,lead){return txt.replace(/{{nome}}/g,lead.nome||'Prezado(a)').replace(/{{clinica}}/g,lead.clinica||'sua clínica');}
+
+async function startSend(){
+  const pending=leads.filter(l=>l.status==='pending');
+  if(!pending.length){alert('Nenhum lead pendente.');return;}
+  const delay=parseInt(document.getElementById('delay').value)||6;
+  const modeLabel=sendMode==='draft'?'rascunho':'envio direto';
+  if(!confirm(`Iniciar ${modeLabel} para ${pending.length} leads?\nDelay: ${delay}s entre cada email.`))return;
+  setStep(3);
+  document.getElementById('overlay').classList.add('active');
+  for(let i=0;i<leads.length;i++){
+    const lead=leads[i];if(lead.status!=='pending')continue;
+    document.getElementById('ovText').textContent=`Enviando para ${lead.email}...`;
+    try{
+      if(isDemo){await sleep(700);leads[i].status=sendMode==='draft'?'draft':'sent';addLog('ok',`✓ Demo ${sendMode==='draft'?'[RASCUNHO]':'[ENVIADO]'} → ${lead.email}`);}
+      else{await sendGmail(lead);leads[i].status=sendMode==='draft'?'draft':'sent';addLog('ok',`✓ ${sendMode==='draft'?'Rascunho salvo':'Email enviado'} → ${lead.email} (${lead.clinica})`);}
+    }catch(err){leads[i].status='error';addLog('err',`✗ Erro → ${lead.email}: ${err.message}`);}
+    renderLeads();updateStats();
+    if(i<leads.length-1)await sleep(delay*1000);
+  }
+  document.getElementById('overlay').classList.remove('active');
+  const ok=leads.filter(l=>l.status==='sent'||l.status==='draft').length;
+  addLog('info',`Concluído. ${ok}/${leads.length} emails processados.`);
+  alert(`✓ Processo concluído!\n${ok} email(s) ${sendMode==='draft'?'salvos como rascunho':'enviados'} por novaiavision.br@gmail.com`);
+}
+
+async function sendGmail(lead){
+  const subject=personalize(document.getElementById('tSubject').value,lead);
+  const body=personalize(document.getElementById('tBody').value,lead);
+  const emailLines=[
+    `From: NovaIA Vision <novaiavision.br@gmail.com>`,
+    `To: ${lead.nome?lead.nome+' <'+lead.email+'>':lead.email}`,
+    `Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+    `MIME-Version: 1.0`,`Content-Type: text/plain; charset=utf-8`,`Content-Transfer-Encoding: base64`,``,
+    btoa(unescape(encodeURIComponent(body)))
+  ];
+  const raw=emailLines.join('\r\n');
+  const encoded=btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const endpoint=sendMode==='draft'
+    ?'https://gmail.googleapis.com/gmail/v1/users/me/drafts'
+    :'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+  const payload=sendMode==='draft'?JSON.stringify({message:{raw:encoded}}):JSON.stringify({raw:encoded});
+  const res=await fetch(endpoint,{method:'POST',headers:{'Authorization':`Bearer ${accessToken}`,'Content-Type':'application/json'},body:payload});
+  if(!res.ok){const err=await res.json().catch(()=>({}));const msg=err.error?.message||`HTTP ${res.status}`;if(res.status===401)throw new Error('Token expirado — reautentique.');throw new Error(msg);}
+  return await res.json();
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function addLog(type,msg){
+  const now=new Date().toLocaleTimeString('pt-BR');
+  const box=document.getElementById('logBox');
+  const line=document.createElement('div');line.className='ll';
+  const cls=type==='ok'?'lok':type==='err'?'lerr':'linf';
+  line.innerHTML=`<span class="lt">${now}</span><span class="${cls}">${msg}</span>`;
+  box.appendChild(line);box.scrollTop=box.scrollHeight;
+}
+</script>
+</body>
+</html>
